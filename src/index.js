@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 
 const { v4: uuidv4, validate } = require('uuid');
+const isUuid = require('is-uuid');
 
 const app = express();
 app.use(express.json());
@@ -10,19 +11,65 @@ app.use(cors());
 const users = [];
 
 function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const userExists = users.find(user => user.username === username);
+
+  if (!userExists) {
+    return response.status(404).json({ error: "User not exists"});
+  }
+
+  request.user = userExists;
+
+  return next();
 }
 
 function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+  const user = request.user;
+
+  if (!user.pro && user.todos.length >= 10) {
+    return response.status(403).json({ error: "You'll need to upgrade to Pro to continue"});
+  }
+   
+  return next();
 }
 
 function checksTodoExists(request, response, next) {
-  // Complete aqui
+  const { username } = request.headers;
+  const { id } = request.params;
+  const userExists = users.find(user => user.username === username);
+
+  if (!userExists) {
+    return response.status(404).json({ error: "User not exists" });;
+  } 
+
+  const todoIsFromInformedUser = userExists.todos.find(todo => todo.id === id);
+
+  const idCheck = '' + id;
+
+  if (!isUuid.v4(id)) {
+    return response.status(400).json({ error: "Id is not valid" });
+  }
+
+  if (!todoIsFromInformedUser) {
+    return response.status(404).json({ error: "To do not exists or is not from the informed username" });
+  }
+
+  request.user = userExists;
+  request.todo = todoIsFromInformedUser;
+  return next();
 }
 
 function findUserById(request, response, next) {
-  // Complete aqui
+  const { id } = request.params;
+  const userExists = users.find(user => user.id === id);
+
+  if (!userExists) {
+    return response.status(404).json({ error: "User not exists" });
+  }
+
+  request.user = userExists;
+
+  return next();
 }
 
 app.post('/users', (request, response) => {
